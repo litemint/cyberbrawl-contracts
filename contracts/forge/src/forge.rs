@@ -59,7 +59,7 @@ pub fn ignite(env: &Env, payer: Address, amount: i128, power: u32,
     if quote.expiry < now {
         return Err(Error::Expired);
     }
-    if amount <= 0 || power == 0 || power > PARAMS.max_power {
+    if amount <= 0 || quote.base <= 0 || power == 0 || power > PARAMS.max_power {
         return Err(Error::InvalidAmount);
     }
     let stroops = u64::try_from(amount).map_err(|_| Error::InvalidAmount)?;

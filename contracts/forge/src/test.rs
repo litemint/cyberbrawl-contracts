@@ -354,3 +354,21 @@ fn test_examples() {
     env.ledger().set_timestamp(env.ledger().timestamp() + 172_800);
     println!("\ncollect two days later: {} stroops paid to the receiver", f.client.collect(&id));
 }
+
+#[test]
+fn test_ignite_zero_base() {
+    let env = Env::default();
+    let f = setup(&env, 10_000_000_000);
+    let payer = f.payer(100_000_000_000);
+
+    // A zero base price must not allow an ION forge at zero CREDIT cost.
+    assert_eq!(
+        code(f.client.try_ignite(
+            &payer,
+            &100_000_000,
+            &1,
+            &f.quote(ID, 0, f.valid())
+        )),
+        6
+    );
+}
