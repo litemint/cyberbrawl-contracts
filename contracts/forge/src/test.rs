@@ -45,8 +45,12 @@ fn setup(env: &Env, stock: i128) -> Fixture<'_> {
 
 impl Fixture<'_> {
     fn quote(&self, id: [u8; 16], base: u64, expiry: u64) -> Bytes {
+        self.quote_to(&self.receiver, id, base, expiry)
+    }
+
+    fn quote_to(&self, receiver: &Address, id: [u8; 16], base: u64, expiry: u64) -> Bytes {
         let mut strkey = [0u8; 56];
-        self.receiver.to_string().copy_into_slice(&mut strkey);
+        receiver.to_string().copy_into_slice(&mut strkey);
         let mut body = [0u8; 88];
         body[0..16].copy_from_slice(&id);
         body[16..72].copy_from_slice(&strkey);
@@ -115,6 +119,7 @@ fn test_ignite_collect() {
     assert_eq!(entry.2, 1_000_000 + 172_800);
     assert_eq!(entry.0, f.receiver);
     assert_eq!(entry.1, 100_000_000);
+    assert_eq!(entry.3, 1);
     assert_eq!(f.balance(&f.credit, &payer), 100_000_000_000 - 2_424_000_000);
 
     // Too early.
@@ -292,6 +297,183 @@ fn test_collect_guards() {
     env.ledger().set_timestamp(entry.2);
     assert_eq!(f.client.collect(&id), 100_000_000);
     assert_eq!(f.balance(&f.ion, &f.receiver), 100_000_000);
+}
+
+// Cost of an ignite, from the premium table: amount x base x premium / 10,000^2.
+fn ignite_cost(amount: i128, base: u64, power: usize) -> i128 {
+    amount * base as i128 * crate::types::ForgeParams::default().premium_bps[power - 1] as i128 / 100_000_000
+}
+
+#[test]
+fn test_extract() {
+    let env = Env::default();
+    let f = setup(&env, 10_000_000_000);
+    let payer = f.payer(100_000_000_000);
+    let id = BytesN::from_array(&env, &ID);
+
+    // 10 ION at power 1: 242.4 CREDIT, two days.
+    let entry = f.client.ignite(&payer, &100_000_000, &1, &f.quote(ID, BASE, f.valid()));
+    let after_ignite = f.balance(&f.credit, &payer);
+
+    // A day in, the forge that finishes now is power 2: the premium step from 1 to 2, 0.2708 x 242.4 = 65.64 CREDIT.
+    env.ledger().set_timestamp(entry.2 - 86_400);
+    assert_eq!(f.client.extract(&payer, &id, &f.quote(ID, BASE, f.valid())), 100_000_000);
+    assert_eq!(env.auths()[0].0, payer);
+    assert_eq!(after_ignite - f.balance(&f.credit, &payer), 656_419_200);
+    assert_eq!(f.balance(&f.ion, &f.receiver), 100_000_000);
+    assert_eq!(f.balance(&f.ion, &f.contract), 9_900_000_000);
+
+    // Start plus extraction is the upfront price of power 2.
+    assert_eq!(100_000_000_000 - f.balance(&f.credit, &payer), ignite_cost(100_000_000, BASE, 2));
+
+    // Gone: nothing to collect, the id is free, the attestation is dead with the entry.
+    assert_eq!(code(f.client.try_collect(&id)), 4);
+    assert_eq!(code(f.client.try_extract(&payer, &id, &f.quote(ID, BASE, f.valid()))), 4);
+    f.client.ignite(&payer, &100_000_000, &1, &f.quote(ID, BASE, f.valid()));
+}
+
+#[test]
+fn test_extract_prices() {
+    // (power paid, seconds elapsed, power that finishes now): start plus extraction equals the upfront price of
+    // that power, exactly, for 300 ION at 24.24.
+    const CASES: [(u32, u64, usize); 10] = [
+        ( 1, 172_799,  2), // A second short of done still rounds up to the next step.
+        ( 1,  86_400,  2),
+        ( 1,  72_000,  3), // 2.4 rounds up to 3.
+        ( 1,  43_200,  4),
+        ( 1,  21_600,  8),
+        ( 1,   7_200, 24), // Two hours in, the ceiling.
+        ( 2,  43_200,  4),
+        ( 2,  10_000, 18), // 17.28 rounds up to 18.
+        (12,   7_200, 24),
+        (23,   7_200, 24),
+    ];
+    let env = Env::default();
+    let f = setup(&env, 100_000_000_000);
+    let payer = f.payer(10_000_000_000_000);
+    let amount: i128 = 3_000_000_000;
+
+    for (i, (power, elapsed, now_power)) in CASES.iter().enumerate() {
+        let id = [i as u8 + 1; 16];
+        let key = BytesN::from_array(&env, &id);
+        let start = env.ledger().timestamp();
+        let before = f.balance(&f.credit, &payer);
+        f.client.ignite(&payer, &amount, power, &f.quote(id, BASE, f.valid()));
+
+        env.ledger().set_timestamp(start + elapsed);
+        f.client.extract(&payer, &key, &f.quote(id, BASE, f.valid()));
+        let paid = before - f.balance(&f.credit, &payer);
+        assert_eq!(paid, ignite_cost(amount, BASE, *now_power), "power {} after {} s should price as power {}", power, elapsed, now_power);
+        assert!(paid > ignite_cost(amount, BASE, *power as usize), "an extraction always costs something");
+        env.ledger().set_timestamp(start);
+    }
+
+    // The base of the minute is the attested one: half the base, half the step.
+    let entry = f.client.ignite(&payer, &amount, &1, &f.quote([99u8; 16], BASE, f.valid()));
+    env.ledger().set_timestamp(entry.2 - 86_400);
+    let before = f.balance(&f.credit, &payer);
+    f.client.extract(&payer, &BytesN::from_array(&env, &[99u8; 16]), &f.quote([99u8; 16], BASE / 2, f.valid()));
+    assert_eq!(before - f.balance(&f.credit, &payer), (ignite_cost(amount, BASE, 2) - ignite_cost(amount, BASE, 1)) / 2);
+}
+
+#[test]
+fn test_extract_too_soon() {
+    let env = Env::default();
+    let f = setup(&env, 10_000_000_000);
+    let payer = f.payer(100_000_000_000);
+    let id = BytesN::from_array(&env, &ID);
+    let start = env.ledger().timestamp();
+
+    // Nothing beats power 24: under two hours in, there is no power that finishes now.
+    f.client.ignite(&payer, &100_000_000, &1, &f.quote(ID, BASE, f.valid()));
+    assert_eq!(code(f.client.try_extract(&payer, &id, &f.quote(ID, BASE, f.valid()))), 7);
+    env.ledger().set_timestamp(start + 7_199);
+    assert_eq!(code(f.client.try_extract(&payer, &id, &f.quote(ID, BASE, f.valid()))), 7);
+    env.ledger().set_timestamp(start + 7_200);
+    f.client.extract(&payer, &id, &f.quote(ID, BASE, f.valid()));
+
+    // A power 24 forge can never be extracted, only collected.
+    env.ledger().set_timestamp(start);
+    let entry = f.client.ignite(&payer, &100_000_000, &24, &f.quote(ID, BASE, f.valid()));
+    env.ledger().set_timestamp(entry.2 - 1);
+    assert_eq!(code(f.client.try_extract(&payer, &id, &f.quote(ID, BASE, f.valid()))), 7);
+    env.ledger().set_timestamp(entry.2);
+    assert_eq!(code(f.client.try_extract(&payer, &id, &f.quote(ID, BASE, f.valid()))), 7);
+    assert_eq!(f.client.collect(&id), 100_000_000);
+}
+
+#[test]
+fn test_extract_guards() {
+    let env = Env::default();
+    let f = setup(&env, 10_000_000_000);
+    let payer = f.payer(100_000_000_000);
+    let id = BytesN::from_array(&env, &ID);
+    let now = env.ledger().timestamp();
+
+    // No forge for the id.
+    assert_eq!(code(f.client.try_extract(&payer, &id, &f.quote(ID, BASE, f.valid()))), 4);
+    let entry = f.client.ignite(&payer, &100_000_000, &1, &f.quote(ID, BASE, f.valid()));
+    env.ledger().set_timestamp(entry.2 - 86_400);
+
+    // Expired, another forge's attestation, another receiver's, wrong length.
+    assert_eq!(code(f.client.try_extract(&payer, &id, &f.quote(ID, BASE, now - 1))), 1);
+    assert_eq!(code(f.client.try_extract(&payer, &id, &f.quote([2u8; 16], BASE, f.valid()))), 6);
+    let stranger = Address::generate(&env);
+    assert_eq!(code(f.client.try_extract(&payer, &id, &f.quote_to(&stranger, ID, BASE, f.valid()))), 6);
+    let mut short = f.quote(ID, BASE, f.valid());
+    short.pop_back();
+    assert_eq!(code(f.client.try_extract(&payer, &id, &short)), 6);
+    assert_eq!(f.balance(&f.ion, &f.receiver), 0);
+
+    // Short of CREDIT: nothing paid, the entry stays.
+    let poor = f.payer(1_000_000);
+    assert!(f.client.try_extract(&poor, &id, &f.quote(ID, BASE, f.valid())).is_err());
+    assert_eq!(f.balance(&f.ion, &f.receiver), 0);
+    assert_eq!(code(f.client.try_collect(&id)), 5);
+
+    // Ready: a free collect, not an extraction.
+    env.ledger().set_timestamp(entry.2);
+    assert_eq!(code(f.client.try_extract(&payer, &id, &f.quote(ID, BASE, f.valid()))), 7);
+    assert_eq!(f.client.collect(&id), 100_000_000);
+}
+
+#[test]
+fn test_legacy_entry() {
+    let env = Env::default();
+    let f = setup(&env, 10_000_000_000);
+    let payer = f.payer(100_000_000_000);
+    let id = BytesN::from_array(&env, &ID);
+    let ready = env.ledger().timestamp() + 172_800;
+
+    // An entry written by v0.1.1: three fields, no power.
+    env.as_contract(&f.contract, || {
+        env.storage().persistent().set(&id, &(f.receiver.clone(), 100_000_000u64, ready));
+    });
+
+    // Still a running forge: busy for ignite, not extractable, collected as before.
+    assert_eq!(code(f.client.try_ignite(&payer, &100_000_000, &1, &f.quote(ID, BASE, f.valid()))), 3);
+    env.ledger().set_timestamp(ready - 86_400);
+    assert_eq!(code(f.client.try_extract(&payer, &id, &f.quote(ID, BASE, f.valid()))), 7);
+    assert_eq!(code(f.client.try_collect(&id)), 5);
+    env.ledger().set_timestamp(ready);
+    assert_eq!(f.client.collect(&id), 100_000_000);
+    assert_eq!(f.balance(&f.ion, &f.receiver), 100_000_000);
+}
+
+#[test]
+#[should_panic]
+fn test_extract_bad_signature() {
+    let env = Env::default();
+    let f = setup(&env, 10_000_000_000);
+    let payer = f.payer(100_000_000_000);
+    let id = BytesN::from_array(&env, &ID);
+    let entry = f.client.ignite(&payer, &100_000_000, &1, &f.quote(ID, BASE, f.valid()));
+    env.ledger().set_timestamp(entry.2 - 86_400);
+
+    // Tampered base.
+    let mut attestation = f.quote(ID, BASE, f.valid());
+    attestation.set(79, attestation.get(79).unwrap() ^ 1);
+    f.client.extract(&payer, &id, &attestation);
 }
 
 #[test]

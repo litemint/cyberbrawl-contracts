@@ -7,7 +7,7 @@
 */
 
 use crate::types::{Entry, Storage};
-use soroban_sdk::{Address, BytesN, Env};
+use soroban_sdk::{Address, BytesN, Env, TryFromVal, Val, Vec};
 
 pub fn get_admin(env: &Env) -> Address {
     env.storage().instance()
@@ -58,8 +58,14 @@ pub fn has_entry(env: &Env, id: &BytesN<16>) -> bool {
     env.storage().persistent().has(id)
 }
 
+// Entries from before v0.1.2 have no power field: read as 0.
 pub fn get_entry(env: &Env, id: &BytesN<16>) -> Option<Entry> {
-    env.storage().persistent().get::<BytesN<16>, Entry>(id)
+    let raw: Vec<Val> = env.storage().persistent().get(id)?;
+    let receiver = Address::try_from_val(env, &raw.get(0)?).ok()?;
+    let amount = u64::try_from_val(env, &raw.get(1)?).ok()?;
+    let ready = u64::try_from_val(env, &raw.get(2)?).ok()?;
+    let power = raw.get(3).and_then(|value| u32::try_from_val(env, &value).ok()).unwrap_or(0);
+    Some(Entry(receiver, amount, ready, power))
 }
 
 pub fn set_entry(env: &Env, id: &BytesN<16>, entry: &Entry) {

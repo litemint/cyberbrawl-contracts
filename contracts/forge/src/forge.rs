@@ -80,7 +80,7 @@ pub fn ignite(env: &Env, payer: Address, amount: i128, power: u32,
 
     token::Client::new(env, &storage::get_credit(env)).burn(&payer, &cost);
 
-    let entry = Entry(quote.receiver, stroops, ready);
+    let entry = Entry(quote.receiver, stroops, ready, power);
     storage::set_entry(env, &quote.id, &entry);
     storage::extend_ttl(env);
 
@@ -88,12 +88,56 @@ pub fn ignite(env: &Env, payer: Address, amount: i128, power: u32,
 }
 
 pub fn collect(env: &Env, id: BytesN<16>) -> Result<i128, Error> {
-    let Entry(receiver, stroops, ready) = storage::get_entry(env, &id).ok_or(Error::NoEntry)?;
+    let Entry(receiver, stroops, ready, _) = storage::get_entry(env, &id).ok_or(Error::NoEntry)?;
     if env.ledger().timestamp() < ready {
         return Err(Error::NotReady);
     }
 
     let amount = stroops as i128;
+    token::Client::new(env, &storage::get_ion(env))
+        .transfer(&env.current_contract_address(), &receiver, &amount);
+
+    storage::remove_entry(env, &id);
+    storage::extend_ttl(env);
+
+    Ok(amount)
+}
+
+pub fn extract(env: &Env, payer: Address, id: BytesN<16>, attestation: Bytes) -> Result<i128, Error> {
+    payer.require_auth();
+
+    let now = env.ledger().timestamp();
+    let quote = verify_attestation(env, &attestation)?;
+    if quote.expiry < now {
+        return Err(Error::Expired);
+    }
+    if quote.id != id {
+        return Err(Error::InvalidAttestation);
+    }
+
+    let Entry(receiver, stroops, ready, power) = storage::get_entry(env, &id).ok_or(Error::NoEntry)?;
+    if quote.receiver != receiver {
+        return Err(Error::InvalidAttestation);
+    }
+    if now >= ready || power == 0 {
+        return Err(Error::InvalidAction);
+    }
+
+    let shortest = PARAMS.duration / PARAMS.max_power as u64;
+    let elapsed = now - (ready - PARAMS.duration / power as u64);
+    if elapsed < shortest {
+        return Err(Error::InvalidAction);
+    }
+    let now_power = ((PARAMS.duration + elapsed - 1) / elapsed) as u32;
+    if now_power <= power || now_power > PARAMS.max_power {
+        return Err(Error::InvalidAction);
+    }
+
+    // Round up to the next power, nothing beats power 24.
+    let amount = stroops as i128;
+    let step = (PARAMS.premium_bps[now_power as usize - 1] - PARAMS.premium_bps[power as usize - 1]) as i128;
+    let cost = amount * quote.base * step / (BPS * BPS);
+    token::Client::new(env, &storage::get_credit(env)).burn(&payer, &cost);
     token::Client::new(env, &storage::get_ion(env))
         .transfer(&env.current_contract_address(), &receiver, &amount);
 

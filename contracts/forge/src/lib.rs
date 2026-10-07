@@ -34,6 +34,11 @@ impl Forge {
         forge::collect(&env, id)
     }
 
+    pub fn extract(env: Env, payer: Address, id: BytesN<16>,
+        attestation: Bytes) -> Result<i128, Error> {
+        forge::extract(&env, payer, id, attestation)
+    }
+
     pub fn set_attestor(env: Env, pubkey: BytesN<32>) -> Result<(), Error> {
         forge::set_attestor(&env, pubkey)
     }

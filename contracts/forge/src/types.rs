@@ -39,7 +39,7 @@ pub struct Quote {
 
 #[derive(Clone)]
 #[contracttype]
-pub struct Entry(pub Address, pub u64, pub u64);
+pub struct Entry(pub Address, pub u64, pub u64, pub u32);
 
 #[derive(Clone, Copy)]
 #[contracterror]
@@ -50,6 +50,7 @@ pub enum Error {
     NoEntry = 4,
     NotReady = 5,
     InvalidAttestation = 6,
+    InvalidAction = 7,
 }
 
 #[derive(Clone)]

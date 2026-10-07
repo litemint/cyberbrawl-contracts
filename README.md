@@ -33,6 +33,13 @@ premium(P) = P^(ln 3 / ln 24)
 | 7 | 19,595 | 15 | 25,501 | 23 | 29,562 |
 | 8 | 20,520 | 16 | 26,076 | 24 | 30,000 |
 
+A running forge can also be pulled early. To `extract` the ION before the matrix has stabilized, you pay the difference between the `ignite` power and the power that would have finished right now (nothing beats power 24):
+
+```
+now_power = ceil(172,800 s / elapsed)
+cost = amount × base × (premium_bps(now_power) − premium_bps(power)) / 10,000²
+```
+
 ### Canonical parameters
 
 | Parameter | Value                        |
@@ -48,6 +55,7 @@ premium(P) = P^(ln 3 / ln 24)
 | `set_attestor` | admin | Rotates the attestor key. |
 | `ignite` | payer | Burns the CREDIT of an order priced on chain from an attested base. |
 | `collect` | anyone | Pays out the ION of a completed order to its receiver. |
+| `extract` | payer | Burns the CREDIT up to the power that finishes now, priced on chain from an attested base, and pays out the ION of a running order now. |
 | `upgrade` | admin | Upgrades the contract code. |
 
 ![Forge: ignite](docs/sequence-ignite.svg)
@@ -60,7 +68,7 @@ Signed by the attestor with ed25519, all numbers big-endian. 152 bytes.
 
 | Bytes | Field | Meaning |
 |---|---|---|
-| 0 to 15 | id | The player id as UTF-8, zero-padded on the right to 16 bytes, never truncated. The key of the forge entry, and the same 16 bytes `collect` takes. |
+| 0 to 15 | id | The player id as UTF-8, zero-padded on the right to 16 bytes, never truncated. The key of the forge entry, and the same 16 bytes `collect` and `extract` take. |
 | 16 to 71 | receiver | The strkey of the address that receives the ION, a plain 56-character G or C address, not muxed. |
 | 72 to 79 | base | CREDIT per ION, in basis points. 24.24 CREDIT per ION is 242,400. |
 | 80 to 87 | expiry | A timestamp in seconds. |
