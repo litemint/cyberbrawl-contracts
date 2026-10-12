@@ -2,6 +2,8 @@
 
 # cyberbrawl-contracts
 
+The smart contracts behind [Cyberbrawl](https://cyberbrawl.io) TCG.
+
 ## Forge Contract
 
 ION is [Cyberbrawl](https://cyberbrawl.io)'s crafting currency, and its price is a living market: it follows the game's economy and is re-quoted as that economy moves.
@@ -83,9 +85,18 @@ Stellar mainnet.
 | Contract | [CDJZCLXBQ6QRRQIPOV73HXOL5HWZBDUWHRESMD23PORSFAGZD3ELZQMH](https://stellar.expert/explorer/public/contract/CDJZCLXBQ6QRRQIPOV73HXOL5HWZBDUWHRESMD23PORSFAGZD3ELZQMH) |
 | Admin | [GDMS6MPSI7DKP4VRZ4NK6LHFWUJ4QAHZ3VO22NYCKBLNOBSWDANGGAME](https://stellar.expert/explorer/public/account/GDMS6MPSI7DKP4VRZ4NK6LHFWUJ4QAHZ3VO22NYCKBLNOBSWDANGGAME) |
 
+## Sui Package
+
+The `sui/` Move package carries the game's assets on Sui: CREDIT, ION and SHARD as coins registered in the Coin
+Registry, cards as objects with Display V2, a transfer policy with a kiosk lock and a 5% royalty, and the Vault that
+mints on withdrawal from the game and burns on deposit back, so the supply on chain is always what players took out.
+It is plumbing between the game and the chain; the economy itself lives in the Forge.
+
+Mainnet package: [`0xc0ecc184efcc2605e55b24afe103dc9d88c7e4cdc918061fcbe42d4f81fe32c3`](https://suiscan.xyz/mainnet/object/0xc0ecc184efcc2605e55b24afe103dc9d88c7e4cdc918061fcbe42d4f81fe32c3).
+
 ## Building
 
-From the repository root:
+The Forge, from the repository root:
 
 ```bash
 stellar contract build
@@ -93,6 +104,16 @@ stellar contract build
 
 ```bash
 cargo test
+```
+
+The Sui package, from `sui/`:
+
+```bash
+sui move build
+```
+
+```bash
+sui move test
 ```
 
 ## Source & License

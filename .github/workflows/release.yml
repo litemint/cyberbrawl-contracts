@@ -17,7 +17,7 @@ jobs:
       release_name: ${{ github.ref_name }}
       release_description: 'Cyberbrawl Forge contract release'
       home_domain: 'cyberbrawl.io'
-      relative_path: contracts/forge
+      relative_path: stellar/forge
       package: 'forge'
     secrets:
       release_token: ${{ secrets.GITHUB_TOKEN }}

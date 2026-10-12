@@ -1,0 +1,8 @@
+[package]
+name = "cyberbrawl"
+edition = "2024"
+license = "MIT"
+authors = ["Fred Kyung-jin Rezeau <hello@kyungj.in>"]
+
+[dependencies]
+kiosk = { git = "https://github.com/MystenLabs/apps.git", subdir = "kiosk", rev = "main" }
