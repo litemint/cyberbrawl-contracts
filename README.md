@@ -89,10 +89,18 @@ Stellar mainnet.
 
 The `sui/` Move package carries the game's assets on Sui: CREDIT, ION and SHARD as coins registered in the Coin
 Registry, cards as objects with Display V2, a transfer policy with a kiosk lock and a 5% royalty, and the Vault that
-mints on withdrawal from the game and burns on deposit back, so the supply on chain is always what players took out.
-It is plumbing between the game and the chain; the economy itself lives in the Forge.
+mints on withdrawal from the game and burns on deposit back.
 
-Mainnet package: [`0xc0ecc184efcc2605e55b24afe103dc9d88c7e4cdc918061fcbe42d4f81fe32c3`](https://suiscan.xyz/mainnet/object/0xc0ecc184efcc2605e55b24afe103dc9d88c7e4cdc918061fcbe42d4f81fe32c3).
+### Deployment
+
+Sui mainnet.
+
+| | Id |
+|---|---|
+| Package | [0xc0ecc184efcc2605e55b24afe103dc9d88c7e4cdc918061fcbe42d4f81fe32c3](https://suiscan.xyz/mainnet/object/0xc0ecc184efcc2605e55b24afe103dc9d88c7e4cdc918061fcbe42d4f81fe32c3) |
+| Admin | [0x21ce1ae0df60205f266117770fbd33aeec158f5d51c71bc7d3909f009b82b8e6](https://suiscan.xyz/mainnet/account/0x21ce1ae0df60205f266117770fbd33aeec158f5d51c71bc7d3909f009b82b8e6) |
+| Vault | [0xc7273cc889432c20eb8c091fbb0502b7154814f66c7dd4b4ce8a75babdc3ae34](https://suiscan.xyz/mainnet/object/0xc7273cc889432c20eb8c091fbb0502b7154814f66c7dd4b4ce8a75babdc3ae34) |
+| Transfer policy | [0x4e3a0a78d23d1a2d0e78296348b3d0fb0ae349a665dc9ba5040a70eb0bba4e13](https://suiscan.xyz/mainnet/object/0x4e3a0a78d23d1a2d0e78296348b3d0fb0ae349a665dc9ba5040a70eb0bba4e13) |
 
 ## Building
 
