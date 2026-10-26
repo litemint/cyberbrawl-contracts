@@ -1,0 +1,19 @@
+@startuml
+title Beam: etch
+
+participant Anyone #EEEEEE
+participant Server #EEEEEE
+participant Beam #E6E0FA
+participant "ION token" as ION #E6E0FA
+participant "Card token" as Card #E6E0FA
+
+note over Server: signs the attestation
+Server -> Anyone: attestation
+note over Anyone: gated tier: proof of the Engram
+Anyone -> Beam: etch(payer, attestation, proof)
+note over Beam: verify signature, expiry
+note over Beam: verify the proof (gated tier)
+note over Beam: card in stock
+Beam -> ION: burn(payer, price)
+Beam -> Card: transfer(receiver, 1)
+@enduml

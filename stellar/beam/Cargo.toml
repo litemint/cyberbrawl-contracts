@@ -1,0 +1,19 @@
+[package]
+name = "beam"
+version = "0.1.0"
+edition = "2021"
+authors = ["Fred Kyung-jin Rezeau <hello@kyungj.in>"]
+description = "Cyberbrawl Beam contract: etch cards on Stellar, top tiers gated by a zero-knowledge proof of the player's Engram"
+repository = "https://github.com/litemint/cyberbrawl-contracts"
+publish = false
+
+[lib]
+crate-type = ["lib", "cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+ed25519-dalek = "2"

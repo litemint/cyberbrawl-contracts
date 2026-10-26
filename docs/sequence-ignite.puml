@@ -1,0 +1,17 @@
+@startuml
+title Forge: ignite
+
+participant Anyone #EEEEEE
+participant Server #EEEEEE
+participant Forge #E6E0FA
+participant "CREDIT token" as CREDIT #E6E0FA
+
+note over Server: signs the attestation
+Server -> Anyone: attestation
+Anyone -> Forge: ignite(payer, amount, power, attestation)
+note over Forge: verify signature, expiry, id
+note over Forge: compute cost and duration
+Forge -> CREDIT: burn(payer, cost)
+note over Forge: store the entry
+Forge --> Anyone: entry
+@enduml

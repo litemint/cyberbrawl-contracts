@@ -85,6 +85,75 @@ Stellar mainnet.
 | Contract | [CDJZCLXBQ6QRRQIPOV73HXOL5HWZBDUWHRESMD23PORSFAGZD3ELZQMH](https://stellar.expert/explorer/public/contract/CDJZCLXBQ6QRRQIPOV73HXOL5HWZBDUWHRESMD23PORSFAGZD3ELZQMH) |
 | Admin | [GDMS6MPSI7DKP4VRZ4NK6LHFWUJ4QAHZ3VO22NYCKBLNOBSWDANGGAME](https://stellar.expert/explorer/public/account/GDMS6MPSI7DKP4VRZ4NK6LHFWUJ4QAHZ3VO22NYCKBLNOBSWDANGGAME) |
 
+## Beam Contract
+
+The Beam is the Stellar contract powering Cyberbrawl crafting a.k.a **ion beam etching**. The contract burns ION to `etch` game assets. The gated tier requires a zero-knowledge proof that the player's [Engram](#engram-circuit) holds a given fact (e.g. achievement, unlock etc.).
+
+### Tiers
+
+| Tier | Gate |
+|---|---|
+| 0 | None. The proof is empty. |
+| 1 | The Engram holds fact 4113 (the in-game Ironclad achievement) with a value of at least 1. |
+
+### Interface
+
+| Function | Who | What |
+|---|---|---|
+| `__constructor` | deployment | Sets the admin, the ION asset, the attestor key and the Engram issuer key, in the deployment transaction. |
+| `etch` | payer | Takes a quote and a proof. Burns the ION of the quote from the payer and pays the card out to the receiver. |
+| `withdraw` | admin | Pulls card stock back out of the contract. |
+| `set_attestor` | admin | Rotates the attestor key. |
+| `set_issuer` | admin | Rotates the Engram issuer key. |
+| `upgrade` | admin | Upgrades the contract code. |
+
+![Beam: etch](docs/sequence-etch.svg)
+
+### Attestation
+
+Signed by the attestor with ed25519, all numbers big-endian. 193 bytes.
+
+| Bytes | Field | Meaning |
+|---|---|---|
+| 0 to 55 | card | The strkey of the card's asset contract. |
+| 56 to 111 | receiver | The strkey of the address that receives the card. |
+| 112 to 119 | price | The ION to burn, in stroops. |
+| 120 | tier | The tier of the card. |
+| 121 to 128 | expiry | A timestamp in seconds. |
+| 129 to 192 | signature | Over bytes 0 to 128. |
+
+### Proof
+
+288 bytes: `a` (64), `b` (128) and `c` (64) as snarkjs writes them, then the nullifier (32). The contract supplies the other public inputs: the issuer key (`Ax`, `Ay`), the fact and the threshold of the tier, a drop of 0, and the receiver as a field element (the first 31 bytes of the SHA-256 of its XDR).
+
+### Deployment
+
+Stellar mainnet.
+
+| | Address |
+|---|---|
+| Contract | [CDQNFEV6NNDEF2PEDI3MBBKZ4G6XBXNZTRB55KUZUDYLA42PI4ZK2XJS](https://stellar.expert/explorer/public/contract/CDQNFEV6NNDEF2PEDI3MBBKZ4G6XBXNZTRB55KUZUDYLA42PI4ZK2XJS) |
+| Admin | [GDMS6MPSI7DKP4VRZ4NK6LHFWUJ4QAHZ3VO22NYCKBLNOBSWDANGGAME](https://stellar.expert/explorer/public/account/GDMS6MPSI7DKP4VRZ4NK6LHFWUJ4QAHZ3VO22NYCKBLNOBSWDANGGAME) |
+
+## Engram Circuit
+
+An Engram is a record of facts about a player (achievements, counters) that the game server signs with a Baby Jubjub key (EdDSA-Poseidon). The facts sit in a Poseidon sparse tree of depth 16: fact `F` is at position `F` and holds its value, and an empty position holds 0.
+
+The circuit in `circuits/circom/engram` proves, without revealing the rest of the Engram:
+
+- the fact sits at its position under a root the server signed for this account,
+- its value is at least the threshold,
+- and the proof belongs to one receiver.
+
+| | |
+|---|---|
+| Public inputs | `Ax`, `Ay` (the server's Engram key), `fact`, `threshold`, `drop`, `receiver` |
+| Public output | `nullifier` = Poseidon(account key, drop) |
+| Private | the secret, the account key, the value, the signature and the path |
+| Proving system | Groth16 on BN254 (Circom, snarkjs), 12,104 non-linear constraints |
+
+Verification key: `engram_vkey.json`
+
 ## Sui Package
 
 The `sui/` Move package carries the game's assets on Sui: CREDIT, ION and SHARD as coins registered in the Coin
@@ -104,7 +173,7 @@ Sui mainnet.
 
 ## Building
 
-The Forge, from the repository root:
+From the repository root:
 
 ```bash
 stellar contract build
