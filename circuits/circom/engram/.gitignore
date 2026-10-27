@@ -3,3 +3,4 @@ build/
 fixtures/
 *.ptau
 *.zkey
+!artifacts/*.zkey
