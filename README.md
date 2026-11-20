@@ -163,7 +163,9 @@ The Codex is the Stellar contract that inscribes the [Cyberbrawl](https://cyberb
 | Function | Who | What |
 |---|---|---|
 | `__constructor` | deployment | Sets the admin, in the deployment transaction. |
-| `inscribe` | admin | Inscribes the boards of a day (`20261120` for November 20, 2026, UTC). |
+| `inscribe` | scribe | Inscribes the boards of a day (`20261120` for November 20, 2026, UTC). |
+| `set_scribe` | admin | Sets the scribe. |
+| `upgrade` | admin | Upgrades the contract code. |
 
 ### Boards
 
@@ -184,8 +186,9 @@ Stellar mainnet.
 
 | | Address |
 |---|---|
-| Contract | [CC3UGNONPC3NYBCOD4S7HW2J55RYAD5MYA3ZWV3FBEYMP7M4YHWGHKV6](https://stellar.expert/explorer/public/contract/CC3UGNONPC3NYBCOD4S7HW2J55RYAD5MYA3ZWV3FBEYMP7M4YHWGHKV6) |
+| Contract | [CCAAPCGWDKS3STD37OPEN42BG7EV2E7KPWMCZZIZDIJ4CO2TP3H22H2H](https://stellar.expert/explorer/public/contract/CCAAPCGWDKS3STD37OPEN42BG7EV2E7KPWMCZZIZDIJ4CO2TP3H22H2H) |
 | Admin | [GDMS6MPSI7DKP4VRZ4NK6LHFWUJ4QAHZ3VO22NYCKBLNOBSWDANGGAME](https://stellar.expert/explorer/public/account/GDMS6MPSI7DKP4VRZ4NK6LHFWUJ4QAHZ3VO22NYCKBLNOBSWDANGGAME) |
+| Scribe | [GDWI5EEHBMG4XA34E6XCPRZRXX7SJCOTYEKZEANLSUJ576ER5EUA3Q4B](https://stellar.expert/explorer/public/account/GDWI5EEHBMG4XA34E6XCPRZRXX7SJCOTYEKZEANLSUJ576ER5EUA3Q4B) |
 
 ## Sui Package
 

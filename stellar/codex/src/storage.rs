@@ -20,6 +20,17 @@ pub fn set_admin(env: &Env, admin: &Address) {
         .set::<Storage, Address>(&Storage::Admin, admin);
 }
 
+pub fn get_scribe(env: &Env) -> Address {
+    env.storage().instance()
+        .get::<Storage, Address>(&Storage::Scribe)
+        .unwrap_or_else(|| panic!("scribe not set"))
+}
+
+pub fn set_scribe(env: &Env, scribe: &Address) {
+    env.storage().instance()
+        .set::<Storage, Address>(&Storage::Scribe, scribe);
+}
+
 pub fn extend_ttl(env: &Env) {
     let max_ttl = env.storage().max_ttl();
     let threshold = max_ttl.saturating_sub(120_960);

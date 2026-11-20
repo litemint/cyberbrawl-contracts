@@ -7,7 +7,7 @@
 */
 
 use crate::{storage, types::Record};
-use soroban_sdk::{Address, Bytes, Env};
+use soroban_sdk::{Address, Bytes, BytesN, ContractExecutable, Env};
 
 pub fn initialize(env: &Env, admin: Address) {
     admin.require_auth();
@@ -18,9 +18,25 @@ pub fn initialize(env: &Env, admin: Address) {
 
 // The boards stay in the transaction.
 pub fn inscribe(env: &Env, day: u32, _boards: Bytes) {
+    let scribe = storage::get_scribe(env);
+    scribe.require_auth();
+
+    Record { day }.publish(env);
+    storage::extend_ttl(env);
+}
+
+pub fn set_scribe(env: &Env, scribe: Address) {
     let admin = storage::get_admin(env);
     admin.require_auth();
 
-    Record { day }.publish(env);
+    storage::set_scribe(env, &scribe);
+    storage::extend_ttl(env);
+}
+
+pub fn upgrade(env: &Env, hash: BytesN<32>) {
+    let admin = storage::get_admin(env);
+    admin.require_auth();
+
+    env.deployer().update_current_contract(ContractExecutable::Wasm(hash));
     storage::extend_ttl(env);
 }

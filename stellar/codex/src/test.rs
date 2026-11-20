@@ -16,8 +16,11 @@ const DAY: u32 = 20261120;
 fn setup(env: &Env) -> (CodexClient<'_>, Address, Address) {
     env.mock_all_auths();
     let admin = Address::generate(env);
+    let scribe = Address::generate(env);
     let contract = env.register(Codex, CodexArgs::__constructor(&admin));
-    (CodexClient::new(env, &contract), admin, contract)
+    let client = CodexClient::new(env, &contract);
+    client.set_scribe(&scribe);
+    (client, scribe, contract)
 }
 
 fn varint(out: &mut Vec<u8>, mut value: u64) {
@@ -54,16 +57,25 @@ fn test_inscribe() {
 }
 
 #[test]
-fn test_inscribe_by_the_admin() {
+fn test_inscribe_by_the_scribe() {
     let env = Env::default();
-    let (client, admin, contract) = setup(&env);
+    let (client, scribe, contract) = setup(&env);
     let data = boards(&env, 1, b"eu0erq");
     client.inscribe(&DAY, &data);
 
-    assert_eq!(env.auths(), [(admin, AuthorizedInvocation {
+    assert_eq!(env.auths(), [(scribe, AuthorizedInvocation {
         function: AuthorizedFunction::Contract((contract, symbol_short!("inscribe"), (DAY, data).into_val(&env))),
         sub_invocations: [].into(),
     })]);
+}
+
+#[test]
+#[should_panic(expected = "scribe not set")]
+fn test_inscribe_without_a_scribe() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let contract = env.register(Codex, CodexArgs::__constructor(&Address::generate(&env)));
+    CodexClient::new(&env, &contract).inscribe(&DAY, &boards(&env, 1, b"eu0erq"));
 }
 
 #[test]

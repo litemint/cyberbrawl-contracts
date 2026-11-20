@@ -12,7 +12,7 @@ mod codex;
 mod storage;
 mod types;
 
-use soroban_sdk::{contract, contractimpl, Address, Bytes, Env};
+use soroban_sdk::{contract, contractimpl, Address, Bytes, BytesN, Env};
 
 #[contract]
 pub struct Codex;
@@ -25,6 +25,14 @@ impl Codex {
 
     pub fn inscribe(env: Env, day: u32, boards: Bytes) {
         codex::inscribe(&env, day, boards)
+    }
+
+    pub fn set_scribe(env: Env, scribe: Address) {
+        codex::set_scribe(&env, scribe)
+    }
+
+    pub fn upgrade(env: Env, hash: BytesN<32>) {
+        codex::upgrade(&env, hash)
     }
 }
 

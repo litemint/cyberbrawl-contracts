@@ -18,4 +18,5 @@ pub struct Record {
 #[contracttype]
 pub enum Storage {
     Admin,
+    Scribe,
 }
