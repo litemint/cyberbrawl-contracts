@@ -1,0 +1,18 @@
+[package]
+name = "codex"
+version = "0.1.0"
+edition = "2021"
+authors = ["Fred Kyung-jin Rezeau <hello@kyungj.in>"]
+description = "Cyberbrawl Codex contract: leaderboards recorded on Stellar"
+repository = "https://github.com/litemint/cyberbrawl-contracts"
+publish = false
+
+[lib]
+crate-type = ["lib", "cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }

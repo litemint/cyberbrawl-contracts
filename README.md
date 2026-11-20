@@ -154,6 +154,39 @@ The circuit in `circuits/circom/engram` proves, without revealing the rest of th
 
 Verification key: `engram_vkey.json`
 
+## Codex Contract
+
+The Codex is the Stellar contract that inscribes the [Cyberbrawl](https://cyberbrawl.io) leaderboards every day: top 1,000 Daily and top 1,000 Ranked Legends.
+
+### Interface
+
+| Function | Who | What |
+|---|---|---|
+| `__constructor` | deployment | Sets the admin, in the deployment transaction. |
+| `inscribe` | admin | Inscribes the boards of a day (`20261120` for November 20, 2026, UTC). |
+
+### Boards
+
+All numbers big-endian.
+
+| Bytes | Field | Meaning |
+|---|---|---|
+| 0 | version | 1. |
+| per board | board | Daily = 0, Ranked Legends = 1. |
+| | count | Entries count, 2 bytes. |
+| | entries | In rank order, first place first. |
+
+An entry is the player id (length on 1 byte, id as UTF-8) and the score as an unsigned LEB128 varint.
+
+### Deployment
+
+Stellar mainnet.
+
+| | Address |
+|---|---|
+| Contract | |
+| Admin | |
+
 ## Sui Package
 
 The `sui/` Move package carries the game's assets on Sui: CREDIT, ION and SHARD as coins registered in the Coin
